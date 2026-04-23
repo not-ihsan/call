@@ -5,7 +5,6 @@
   <title>Live Call | Mohammed Ihsan</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Simple styles (you can later match your portfolio theme) -->
   <style>
     :root {
       --bg: #0f1117;
@@ -296,7 +295,7 @@
       <div>
         <div class="call-title">Live Call · Mohammed Ihsan</div>
         <div style="font-size:13px; color:var(--muted); margin-top:2px;">
-          Browser‑to‑browser video. Admin can soft‑mute like WhatsApp.
+          Browser‑to‑browser video. Admin can soft‑mute and control client camera.
         </div>
       </div>
       <div style="display:flex; align-items:center; gap:10px;">
@@ -354,10 +353,6 @@
             <label>Room ID</label>
             <input type="text" id="roomIdInput" value="ihsan-room-1" />
           </div>
-          <div class="field-row">
-            <label>Admin Key</label>
-            <input type="text" id="adminKeyInput" value="ihsan2025" />
-          </div>
           <div class="field-row" style="justify-content:space-between;">
             <span style="color:var(--muted);">Admin tools:</span>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
@@ -368,7 +363,7 @@
             </div>
           </div>
           <div style="margin-top:4px; font-size:11px; color:var(--muted);">
-            As admin, you can send a mute command. Client sees "Muted by host" and their mic turns off.
+            As admin, you can send mute and camera commands. Client sees clear indicators.
           </div>
         </div>
 
@@ -391,6 +386,9 @@
   </div>
 
   <script>
+    // Change this when you want to rotate the admin password
+    const ADMIN_KEY = "ihsan2025";
+
     const remoteVideo = document.getElementById("remoteVideo");
     const localVideo = document.getElementById("localVideo");
     const statusText = document.getElementById("statusText");
@@ -398,13 +396,14 @@
     const remoteLabelText = document.getElementById("remoteLabelText");
     const localLabelText = document.getElementById("localLabelText");
     const roomIdInput = document.getElementById("roomIdInput");
-    const adminKeyInput = document.getElementById("adminKeyInput");
     const btnToggleMic = document.getElementById("btnToggleMic");
     const btnToggleCam = document.getElementById("btnToggleCam");
     const btnStartCall = document.getElementById("btnStartCall");
     const btnEndCall = document.getElementById("btnEndCall");
     const btnSoftMute = document.getElementById("btnSoftMute");
     const btnSoftUnmute = document.getElementById("btnSoftUnmute");
+    const btnCamOffClient = document.getElementById("btnCamOffClient");
+    const btnCamOnClient = document.getElementById("btnCamOnClient");
     const clientMuteStateText = document.getElementById("clientMuteStateText");
     const clientInfoText = document.getElementById("clientInfoText");
     const logEl = document.getElementById("log");
@@ -442,17 +441,36 @@
         localLabelText.textContent = "You (Admin)";
         btnSoftMute.disabled = false;
         btnSoftUnmute.disabled = false;
+        btnCamOffClient.disabled = false;
+        btnCamOnClient.disabled = false;
       } else {
         remoteLabelText.textContent = "Host";
         localLabelText.textContent = "You (Client)";
         btnSoftMute.disabled = true;
         btnSoftUnmute.disabled = true;
+        btnCamOffClient.disabled = true;
+        btnCamOnClient.disabled = true;
       }
     }
 
     roleRadios.forEach(r => {
       r.addEventListener("change", () => {
-        isAdmin = r.value === "admin";
+        const wantsAdmin = r.value === "admin";
+
+        if (wantsAdmin) {
+          const entered = prompt("Enter admin password:");
+          if (entered !== ADMIN_KEY) {
+            alert("Incorrect password. Staying in client mode.");
+            roleRadios.forEach(rr => {
+              if (rr.value === "client") rr.checked = true;
+            });
+            isAdmin = false;
+            updateRoleUI();
+            return;
+          }
+        }
+
+        isAdmin = wantsAdmin;
         updateRoleUI();
         log("ROLE", isAdmin ? "Switched to ADMIN" : "Switched to CLIENT", isAdmin ? "admin" : "client");
       });
@@ -487,10 +505,8 @@
 
       peer.on("open", id => {
         log("SYS", "Peer connected with id: " + id);
-        statusText.textContent = "Status: Peer connected (" + (isAdmin ? "admin" : "client") + ")";
-        if (isAdmin) {
-          // admin waits for connections
-        } else {
+        statusText.textContent = "Status: Peer online (" + (isAdmin ? "admin" : "client") + ")";
+        if (!isAdmin) {
           connectAsClient();
         }
       });
@@ -502,7 +518,6 @@
       });
 
       peer.on("call", call => {
-        // Incoming media call
         log("SYS", "Incoming media call");
         getLocalStream().then(stream => {
           if (!stream) return;
@@ -521,7 +536,6 @@
       });
 
       peer.on("connection", conn => {
-        // Incoming data connection
         dataConn = conn;
         log("SYS", "Data channel connected (" + conn.peer + ")");
         setupDataHandlers();
@@ -568,14 +582,13 @@
       if (!dataConn) return;
       dataConn.on("data", msg => {
         if (!msg || typeof msg !== "object") return;
+
         if (msg.type === "hello") {
           log(isAdmin ? "ADMIN" : "CLIENT", "Hello from " + (msg.from || "peer"), isAdmin ? "admin" : "client");
-          if (isAdmin) {
-            clientInfoText.textContent = "Client connected.";
-          }
+          if (isAdmin) clientInfoText.textContent = "Client connected.";
         }
+
         if (msg.type === "mute") {
-          // Admin tells client to mute
           if (!isAdmin) {
             hardMutedByAdmin = true;
             setLocalMute(true);
@@ -584,6 +597,7 @@
             alert("You have been muted by the host.");
           }
         }
+
         if (msg.type === "unmute-allowed") {
           if (!isAdmin) {
             hardMutedByAdmin = false;
@@ -592,8 +606,39 @@
             alert("Host has allowed you to unmute your mic.");
           }
         }
+
         if (msg.type === "client-mute-state" && isAdmin) {
           clientMuteStateText.textContent = "Client mic: " + (msg.muted ? "muted" : "unmuted");
+        }
+
+        if (msg.type === "cam-off") {
+          if (!isAdmin) {
+            if (localStream) {
+              localStream.getVideoTracks().forEach(t => t.enabled = false);
+            }
+            isCamOff = true;
+            btnToggleCam.textContent = "📷 Camera On";
+            log("ADMIN", "Host turned your camera OFF", "admin");
+            alert("Your camera has been turned off by the host.");
+          }
+        }
+
+        if (msg.type === "cam-on") {
+          if (!isAdmin) {
+            if (localStream) {
+              localStream.getVideoTracks().forEach(t => t.enabled = true);
+            }
+            isCamOff = false;
+            btnToggleCam.textContent = "📷 Camera Off";
+            log("ADMIN", "Host turned your camera ON", "admin");
+            alert("Host has turned your camera back on.");
+          }
+        }
+
+        if (msg.type === "end") {
+          log("SYS", "Call ended by host");
+          alert("Call ended by host.");
+          endCall();
         }
       });
     }
@@ -605,11 +650,9 @@
       }
       btnToggleMic.textContent = mute ? "🎙️ Unmute" : "🎙️ Mute";
       const label = document.getElementById("localLabel");
-      if (mute) {
-        label.classList.add("badge-muted");
-      } else {
-        label.classList.remove("badge-muted");
-      }
+      if (mute) label.classList.add("badge-muted");
+      else label.classList.remove("badge-muted");
+
       if (!isAdmin) {
         sendData({ type: "client-mute-state", muted: mute });
       }
@@ -663,9 +706,7 @@
     });
 
     btnEndCall.addEventListener("click", () => {
-      if (isAdmin) {
-        sendData({ type: "end" });
-      }
+      if (isAdmin) sendData({ type: "end" });
       endCall();
     });
 
@@ -681,26 +722,18 @@
       log("ADMIN", "Sent allow‑unmute to client", "admin");
     });
 
-    // Basic "end" handling for client
-    // (Attach to dataConn in setupDataHandlers)
-    // Extend setupDataHandlers:
-    const oldSetup = setupDataHandlers;
-    function extendedSetup() {
-      oldSetup();
-      if (!dataConn) return;
-      dataConn.on("data", msg => {
-        if (!msg || typeof msg !== "object") return;
-        if (msg.type === "end") {
-          log("SYS", "Call ended by host");
-          alert("Call ended by host.");
-          endCall();
-        }
-      });
-    }
-    // Monkey patch
-    setupDataHandlers = extendedSetup;
+    btnCamOffClient.addEventListener("click", () => {
+      if (!isAdmin) return;
+      sendData({ type: "cam-off" });
+      log("ADMIN", "Sent camera OFF command to client", "admin");
+    });
 
-    // Initial UI
+    btnCamOnClient.addEventListener("click", () => {
+      if (!isAdmin) return;
+      sendData({ type: "cam-on" });
+      log("ADMIN", "Sent camera ON command to client", "admin");
+    });
+
     updateRoleUI();
   </script>
 </body>
