@@ -170,6 +170,7 @@
       display: flex;
       justify-content: center;
       gap: 10px;
+      flex-wrap: wrap;
     }
     .btn {
       border-radius: 999px;
@@ -275,12 +276,48 @@
     .tag-admin { color: #38bdf8; }
     .tag-client { color: #a855f7; }
     .tag-sys { color: #9ca3af; }
+
+    /* Hide admin tools row for client role */
+    body[data-role="client"] .admin-tools-row {
+      display: none;
+    }
+
     @media (max-width: 900px) {
-      .call-main {
-        grid-template-columns: 1fr;
-      }
+      .call-shell { padding: 12px; }
+      .call-main { grid-template-columns: 1fr; }
       .video-grid {
         grid-template-columns: 1fr;
+        min-height: 220px;
+      }
+      .side-panel {
+        grid-template-rows: auto auto auto;
+      }
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 8px; }
+      .call-shell {
+        border-radius: 0;
+        max-width: 100%;
+      }
+      .call-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .btn {
+        flex: 1 1 calc(50% - 6px);
+        justify-content: center;
+      }
+      .side-section {
+        padding: 6px 8px;
+      }
+      .field-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .field-row label {
+        min-width: 0;
       }
     }
   </style>
@@ -351,7 +388,7 @@
             <label>Room ID</label>
             <input type="text" id="roomIdInput" value="ihsan-room-1" />
           </div>
-          <div class="field-row" style="justify-content:space-between;">
+          <div class="field-row admin-tools-row" style="justify-content:space-between;">
             <span style="color:var(--muted);">Admin tools:</span>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
               <button class="btn" id="btnSoftMute" disabled>🔇 Mute Client</button>
@@ -433,6 +470,8 @@
     }
 
     function updateRoleUI() {
+      document.body.setAttribute("data-role", isAdmin ? "admin" : "client");
+
       roleText.textContent = "Role: " + (isAdmin ? "Admin" : "Client");
       if (isAdmin) {
         remoteLabelText.textContent = "Client";
