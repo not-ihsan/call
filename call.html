@@ -402,7 +402,7 @@
             <span style="color:var(--muted);">Admin tools:</span>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
               <button class="btn" id="btnSoftMute" disabled>🔇 Mute Client</button>
-              <button class="btn" id="btnSoftUnmute" disabled>🔊 Allow Unmute</button>
+              <button class="btn" id="btnSoftUnmute" disabled>🔊 Unmute Client</button>
               <button class="btn" id="btnCamOffClient" disabled>📷 Hide Camera</button>
               <button class="btn" id="btnCamOnClient" disabled>📷 Show Camera</button>
             </div>
@@ -644,11 +644,12 @@
           }
         }
 
-        if (msg.type === "unmute-allowed") {
+        if (msg.type === "unmute") {
           if (!isAdmin) {
             hardMutedByAdmin = false;
-            clientMuteStateText.textContent = "Client mic: you may unmute";
-            log("ADMIN", "Host allows unmute now", "admin");
+            setLocalMute(false);
+            clientMuteStateText.textContent = "Client mic: unmuted by host";
+            log("ADMIN", "Host unmuted your mic", "admin");
           }
         }
 
@@ -758,8 +759,8 @@
 
     btnSoftUnmute.addEventListener("click", () => {
       if (!isAdmin) return;
-      sendData({ type: "unmute-allowed" });
-      log("ADMIN", "Sent allow‑unmute to client", "admin");
+      sendData({ type: "unmute" });
+      log("ADMIN", "Sent UNMUTE command to client", "admin");
     });
 
     btnCamOffClient.addEventListener("click", () => {
