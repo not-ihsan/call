@@ -14,7 +14,6 @@
       --border: #30363d;
       --text: #e6edf3;
       --muted: #8b949e;
-      --danger: #ff4f4f;
       --radius: 10px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -286,7 +285,6 @@
     }
   </style>
 
-  <!-- PeerJS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
@@ -295,7 +293,7 @@
       <div>
         <div class="call-title">Live Call · Mohammed Ihsan</div>
         <div style="font-size:13px; color:var(--muted); margin-top:2px;">
-          Browser‑to‑browser video. Admin can soft‑mute and control client camera.
+          Browser‑to‑browser video. Admin can mute and control client camera.
         </div>
       </div>
       <div style="display:flex; align-items:center; gap:10px;">
@@ -363,7 +361,7 @@
             </div>
           </div>
           <div style="margin-top:4px; font-size:11px; color:var(--muted);">
-            As admin, you can send mute and camera commands. Client sees clear indicators.
+            Admin controls affect the client stream; client preview may be hidden.
           </div>
         </div>
 
@@ -386,7 +384,6 @@
   </div>
 
   <script>
-    // Change this when you want to rotate the admin password
     const ADMIN_KEY = "ihsan2025";
 
     const remoteVideo = document.getElementById("remoteVideo");
@@ -413,6 +410,7 @@
     let isMutedLocally = false;
     let isCamOff = false;
     let hardMutedByAdmin = false;
+    let hideLocalPreview = false;
 
     let localStream = null;
     let remoteStream = null;
@@ -460,12 +458,12 @@
         if (wantsAdmin) {
           const entered = prompt("Enter admin password:");
           if (entered !== ADMIN_KEY) {
-            alert("Incorrect password. Staying in client mode.");
             roleRadios.forEach(rr => {
               if (rr.value === "client") rr.checked = true;
             });
             isAdmin = false;
             updateRoleUI();
+            log("SYS", "Admin password incorrect — remained in client mode", "sys");
             return;
           }
         }
@@ -481,7 +479,11 @@
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localStream = stream;
-        localVideo.srcObject = stream;
+        if (!hideLocalPreview) {
+          localVideo.srcObject = stream;
+        } else {
+          localVideo.srcObject = null;
+        }
         log("SYS", "Camera & mic access granted");
         return stream;
       } catch (err) {
@@ -506,9 +508,7 @@
       peer.on("open", id => {
         log("SYS", "Peer connected with id: " + id);
         statusText.textContent = "Status: Peer online (" + (isAdmin ? "admin" : "client") + ")";
-        if (!isAdmin) {
-          connectAsClient();
-        }
+        if (!isAdmin) connectAsClient();
       });
 
       peer.on("error", err => {
@@ -573,9 +573,7 @@
     }
 
     function sendData(msg) {
-      if (dataConn && dataConn.open) {
-        dataConn.send(msg);
-      }
+      if (dataConn && dataConn.open) dataConn.send(msg);
     }
 
     function setupDataHandlers() {
@@ -594,7 +592,6 @@
             setLocalMute(true);
             clientMuteStateText.textContent = "Client mic: muted by host";
             log("ADMIN", "Mute command received — mic disabled", "admin");
-            alert("You have been muted by the host.");
           }
         }
 
@@ -603,7 +600,6 @@
             hardMutedByAdmin = false;
             clientMuteStateText.textContent = "Client mic: you may unmute";
             log("ADMIN", "Host allows unmute now", "admin");
-            alert("Host has allowed you to unmute your mic.");
           }
         }
 
@@ -613,31 +609,28 @@
 
         if (msg.type === "cam-off") {
           if (!isAdmin) {
-            if (localStream) {
-              localStream.getVideoTracks().forEach(t => t.enabled = false);
-            }
+            if (localStream) localStream.getVideoTracks().forEach(t => t.enabled = false);
             isCamOff = true;
             btnToggleCam.textContent = "📷 Camera On";
+            hideLocalPreview = false;
+            localVideo.srcObject = null;
             log("ADMIN", "Host turned your camera OFF", "admin");
-            alert("Your camera has been turned off by the host.");
           }
         }
 
         if (msg.type === "cam-on") {
           if (!isAdmin) {
-            if (localStream) {
-              localStream.getVideoTracks().forEach(t => t.enabled = true);
-            }
+            if (localStream) localStream.getVideoTracks().forEach(t => t.enabled = true);
             isCamOff = false;
             btnToggleCam.textContent = "📷 Camera Off";
-            log("ADMIN", "Host turned your camera ON", "admin");
-            alert("Host has turned your camera back on.");
+            hideLocalPreview = true;
+            localVideo.srcObject = null;
+            log("ADMIN", "Host turned your camera ON (preview hidden)", "admin");
           }
         }
 
         if (msg.type === "end") {
           log("SYS", "Call ended by host");
-          alert("Call ended by host.");
           endCall();
         }
       });
@@ -645,24 +638,18 @@
 
     function setLocalMute(mute) {
       isMutedLocally = mute;
-      if (localStream) {
-        localStream.getAudioTracks().forEach(t => t.enabled = !mute);
-      }
+      if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !mute);
       btnToggleMic.textContent = mute ? "🎙️ Unmute" : "🎙️ Mute";
       const label = document.getElementById("localLabel");
       if (mute) label.classList.add("badge-muted");
       else label.classList.remove("badge-muted");
 
-      if (!isAdmin) {
-        sendData({ type: "client-mute-state", muted: mute });
-      }
+      if (!isAdmin) sendData({ type: "client-mute-state", muted: mute });
     }
 
     function setLocalCamOff(off) {
       isCamOff = off;
-      if (localStream) {
-        localStream.getVideoTracks().forEach(t => t.enabled = !off);
-      }
+      if (localStream) localStream.getVideoTracks().forEach(t => t.enabled = !off);
       btnToggleCam.textContent = off ? "📷 Camera On" : "📷 Camera Off";
     }
 
@@ -684,16 +671,20 @@
 
     btnToggleMic.addEventListener("click", () => {
       if (!localStream) return;
-      if (!isAdmin && hardMutedByAdmin) {
-        alert("You are currently muted by the host.");
-        return;
-      }
+      if (!isAdmin && hardMutedByAdmin) return;
       setLocalMute(!isMutedLocally);
     });
 
     btnToggleCam.addEventListener("click", () => {
       if (!localStream) return;
       setLocalCamOff(!isCamOff);
+
+      if (!isCamOff) {
+        hideLocalPreview = false;
+        localVideo.srcObject = localStream;
+      } else {
+        localVideo.srcObject = null;
+      }
     });
 
     btnStartCall.addEventListener("click", () => {
