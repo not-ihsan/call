@@ -117,17 +117,20 @@
     .video-grid {
       position: relative;
       display: grid;
-      grid-template-columns: 1fr 0.55fr;
+      grid-template-columns: 1.25fr 0.75fr; /* remote wider than admin */
       gap: 8px;
-      height: 100%;
-      min-height: 260px;
+      align-items: stretch;
     }
     .video-wrapper {
       position: relative;
-      background: radial-gradient(circle at top, #1f2937 0, #020617 55%, #000 100%);
+      background: #020617;
       border-radius: 12px;
       overflow: hidden;
       border: 1px solid rgba(75, 85, 99, 0.8);
+    }
+    /* Admin preview always 16:9 so it looks full */
+    .video-wrapper:nth-child(2) {
+      aspect-ratio: 16 / 9;
     }
     video {
       width: 100%;
@@ -303,7 +306,6 @@
       .call-main { grid-template-columns: 1fr; }
       .video-grid {
         grid-template-columns: 1fr;
-        min-height: 220px;
       }
       .side-panel {
         grid-template-rows: auto auto auto;
