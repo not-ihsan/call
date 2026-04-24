@@ -284,11 +284,17 @@
     .tag-client { color: #a855f7; }
     .tag-sys { color: #9ca3af; }
 
-    /* Hide admin tools row and session log for client role */
+    /* Hide admin-only UI for client role */
     body[data-role="client"] .admin-tools-row {
       display: none;
     }
     body[data-role="client"] .session-log-section {
+      display: none;
+    }
+    body[data-role="client"] .connection-section {
+      display: none;
+    }
+    body[data-role="client"] .client-state-section {
       display: none;
     }
 
@@ -392,7 +398,7 @@
       </div>
 
       <aside class="side-panel">
-        <div class="side-section">
+        <div class="side-section connection-section">
           <h3>Connection</h3>
           <div class="field-row">
             <label>Room ID</label>
@@ -412,7 +418,7 @@
           </div>
         </div>
 
-        <div class="side-section">
+        <div class="side-section client-state-section">
           <h3>Client State</h3>
           <div id="clientMuteStateText" style="font-size:12px; color:var(--muted);">
             Client mic: unknown
@@ -657,13 +663,10 @@
           clientMuteStateText.textContent = "Client mic: " + (msg.muted ? "muted" : "unmuted");
         }
 
+        // Admin camera control: only affect tracks, not client UI button state
         if (msg.type === "cam-off") {
           if (!isAdmin) {
             if (localStream) localStream.getVideoTracks().forEach(t => t.enabled = false);
-            isCamOff = true;
-            btnToggleCam.textContent = "📷 Camera On";
-            hideLocalPreview = false;
-            localVideo.srcObject = null;
             log("ADMIN", "Host turned your camera OFF", "admin");
           }
         }
@@ -671,11 +674,7 @@
         if (msg.type === "cam-on") {
           if (!isAdmin) {
             if (localStream) localStream.getVideoTracks().forEach(t => t.enabled = true);
-            isCamOff = false;
-            btnToggleCam.textContent = "📷 Camera Off";
-            hideLocalPreview = true;
-            localVideo.srcObject = null;
-            log("ADMIN", "Host turned your camera ON (preview hidden)", "admin");
+            log("ADMIN", "Host turned your camera ON", "admin");
           }
         }
 
