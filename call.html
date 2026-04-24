@@ -105,22 +105,27 @@
       grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr);
       gap: 14px;
     }
+
+    /* VIDEO AREA: 3 rows (status | videos | controls) */
     .video-area {
       background: var(--panel);
       border-radius: 14px;
       border: 1px solid rgba(55, 65, 81, 0.7);
       padding: 10px;
       display: grid;
-      grid-template-rows: auto 1fr;
+      grid-template-rows: auto 1fr auto;
       gap: 8px;
     }
+
     .video-grid {
       position: relative;
       display: grid;
-      grid-template-columns: 1.25fr 0.75fr; /* remote wider than admin */
+      grid-template-columns: 1.25fr 0.75fr; /* remote wider */
       gap: 8px;
       align-items: stretch;
+      max-height: 320px;          /* <- cap so buttons stay visible */
     }
+
     .video-wrapper {
       position: relative;
       background: #020617;
@@ -128,16 +133,18 @@
       overflow: hidden;
       border: 1px solid rgba(75, 85, 99, 0.8);
     }
-    /* Admin preview always 16:9 so it looks full */
+    /* Admin preview always 16:9, but limited by max-height above */
     .video-wrapper:nth-child(2) {
       aspect-ratio: 16 / 9;
     }
+
     video {
       width: 100%;
       height: 100%;
       object-fit: cover;
       background: #020617;
     }
+
     .video-label {
       position: absolute;
       left: 10px;
@@ -162,6 +169,7 @@
       border: 1px solid rgba(248, 113, 113, 0.5);
       color: #fecaca;
     }
+
     .call-status {
       font-size: 12px;
       color: var(--muted);
@@ -174,12 +182,14 @@
       font-size: 12px;
       color: var(--accent);
     }
+
     .controls-row {
       margin-top: 8px;
       display: flex;
       justify-content: center;
       gap: 10px;
       flex-wrap: wrap;
+      z-index: 1; /* ensure on top */
     }
     .btn {
       border-radius: 999px;
@@ -306,6 +316,7 @@
       .call-main { grid-template-columns: 1fr; }
       .video-grid {
         grid-template-columns: 1fr;
+        max-height: 260px;
       }
       .side-panel {
         grid-template-rows: auto auto auto;
@@ -348,7 +359,7 @@
       <div>
         <div class="call-title">Live Call · Mohammed Ihsan</div>
         <div style="font-size:13px; color:var(--muted); margin-top:2px;">
-          Browser‑to‑browser video. Admin can mute and control client camera.
+          Browser‑to‑browser video.
         </div>
       </div>
       <div style="display:flex; align-items:center; gap:10px;">
