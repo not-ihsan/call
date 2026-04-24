@@ -106,7 +106,7 @@
       gap: 14px;
     }
 
-    /* VIDEO AREA: 3 rows (status | videos | controls) */
+    /* VIDEO AREA: 3 rows (status | videos | controls), fixed height */
     .video-area {
       background: var(--panel);
       border-radius: 14px;
@@ -115,15 +115,17 @@
       display: grid;
       grid-template-rows: auto 1fr auto;
       gap: 8px;
+      max-height: 420px;     /* total panel height */
+      overflow: hidden;      /* nothing can bleed out */
     }
 
     .video-grid {
       position: relative;
       display: grid;
-      grid-template-columns: 1.25fr 0.75fr; /* remote wider */
+      grid-template-columns: 1.1fr 0.9fr;
       gap: 8px;
       align-items: stretch;
-      max-height: 320px;          /* <- cap so buttons stay visible */
+      overflow: hidden;      /* keep videos inside area */
     }
 
     .video-wrapper {
@@ -133,10 +135,8 @@
       overflow: hidden;
       border: 1px solid rgba(75, 85, 99, 0.8);
     }
-    /* Admin preview always 16:9, but limited by max-height above */
-    .video-wrapper:nth-child(2) {
-      aspect-ratio: 16 / 9;
-    }
+
+    /* no fixed aspect-ratio: both tiles flex within the grid */
 
     video {
       width: 100%;
@@ -189,7 +189,8 @@
       justify-content: center;
       gap: 10px;
       flex-wrap: wrap;
-      z-index: 1; /* ensure on top */
+      z-index: 2;
+      position: relative;   /* ensure it stacks above videos */
     }
     .btn {
       border-radius: 999px;
@@ -314,10 +315,8 @@
     @media (max-width: 900px) {
       .call-shell { padding: 12px; }
       .call-main { grid-template-columns: 1fr; }
-      .video-grid {
-        grid-template-columns: 1fr;
-        max-height: 260px;
-      }
+      .video-area { max-height: 360px; }
+      .video-grid { grid-template-columns: 1fr; }
       .side-panel {
         grid-template-rows: auto auto auto;
       }
